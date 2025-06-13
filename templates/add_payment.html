@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Добавить платеж</h2>
+
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+
+{% if not client_name %}
+    <div class="mb-4">
+        <label for="clientSearch">Поиск клиента:</label>
+        <input type="text" id="clientSearch" class="form-control" placeholder="Начните вводить имя клиента..." autofocus>
+        <div id="searchResults" class="list-group mt-2" style="display: none;"></div>
+    </div>
+
+    <hr>
+    <h5>Все клиенты:</h5>
+    {% if all_clients %}
+    <ol class="list-group list-group-numbered" id="allClientsList">
+        {% for name in all_clients %}
+        <li class="list-group-item list-group-item-action"
+            onclick="window.location.href='{{ url_for('add_payment', client_name=name) }}'"
+            style="cursor: pointer;">
+            {{ name }}
+        </li>
+        {% endfor %}
+    </ol>
+    {% else %}
+    <p class="text-muted">Список клиентов пуст.</p>
+    {% endif %}
+{% else %}
+    <div class="mb-3">
+        <strong>Клиент:</strong> {{ selected_client }}
+        <a href="{{ url_for('add_payment') }}" class="btn btn-sm btn-secondary ms-3">Сбросить</a>
+    </div>
+
+    <form method="POST">
+    <label for="item_id">Товар:</label>
+    <select name="item_id" class="form-control" required id="itemSelect">
+        {% for item in items %}
+        <option value="{{ item.id }}" data-price="{{ item.price }}" data-purchase="{{ item.purchase_price }}">
+            {{ item.name }} — {{ item.price | rub }}
+        </option>
+        {% endfor %}
+    </select>
+
+    <label for="amount" class="mt-3">Сумма платежа:</label>
+    <input type="number" name="amount" step="0.01" class="form-control" required id="amountInput">
+
+    <div class="mt-2">
+        <strong>Прибыль с платежа:</strong> <span id="paymentProfit">—</span>
+    </div>
+
+
+        <label for="created_at" class="mt-3">Дата платежа:</label>
+        <input type="date" name="created_at" class="form-control" required value="{{ current_date }}">
+
+        {% if current_user.active_license and current_user.active_license.is_active %}
+        <button type="submit" class="btn btn-success mt-3" {% if not items %}disabled{% endif %}>
+            Сохранить платеж
+        </button>
+        {% else %}
+        <button type="button" class="btn btn-secondary mt-2" disabled>Доступ ограничен</button>
+        {% endif %}
+    </form>
+
+    {% if payments %}
+    <hr>
+    <h4>История платежей</h4>
+    <ul class="list-group">
+        {% for payment in payments %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            {{ payment.item.name }} – {{ payment.amount | rub }} –
+            {{ payment.created_at.strftime('%d.%m.%Y') if payment.created_at else 'дата не указана' }}
+            <button class="btn btn-sm btn-outline-danger delete-payment-btn ms-3"
+                    data-payment-id="{{ payment.id }}"
+                    data-client-name="{{ selected_client }}"
+                    data-bs-toggle="modal"
+                    data-bs-target="#deletePaymentModal">
+                <i class="fas fa-trash-alt"></i> Удалить
+            </button>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-muted mt-3">Платежи ещё не добавлены.</p>
+    {% endif %}
+{% endif %}
+
+<!-- Модал удаления платежа -->
+<div class="modal fade" id="deletePaymentModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="deletePaymentForm" method="POST" action="">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Удалить платеж</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p>Удалить выбранный платеж?</p>
+          <input type="hidden" name="client_name" id="payClientName">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+          <button type="submit" class="btn btn-danger">Удалить</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const modal = document.getElementById('deletePaymentModal');
+  const form  = document.getElementById('deletePaymentForm');
+  const input = document.getElementById('payClientName');
+
+  modal.addEventListener('show.bs.modal', event => {
+    const btn = event.relatedTarget;
+    const paymentId = btn.getAttribute('data-payment-id');
+    const clientName = btn.getAttribute('data-client-name');
+
+    form.action = `/delete_payment/${paymentId}`;
+    input.value = clientName;
+  });
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const clientSearch = document.getElementById('clientSearch');
+    const searchResults = document.getElementById('searchResults');
+    const allClients = Array.from(document.querySelectorAll('#allClientsList li')).map(li => li.textContent.trim());
+
+    clientSearch.addEventListener('input', function() {
+        const query = this.value.toLowerCase();
+        searchResults.innerHTML = '';
+
+        if (query.length > 0) {
+            const matches = allClients.filter(client => client.toLowerCase().includes(query));
+            if (matches.length > 0) {
+                matches.slice(0, 5).forEach(client => {
+                    const item = document.createElement('div');
+                    item.className = 'list-group-item list-group-item-action';
+                    item.style.cursor = 'pointer';
+                    item.textContent = client;
+                    item.addEventListener('click', function() {
+                        window.location.href = `{{ url_for('add_payment') }}?client_name=${encodeURIComponent(client)}`;
+                    });
+                    searchResults.appendChild(item);
+                });
+            } else {
+                const item = document.createElement('div');
+                item.className = 'list-group-item text-muted';
+                item.textContent = 'Клиенты не найдены';
+                searchResults.appendChild(item);
+            }
+            searchResults.style.display = 'block';
+        } else {
+            searchResults.style.display = 'none';
+        }
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!clientSearch.contains(e.target) && !searchResults.contains(e.target)) {
+            searchResults.style.display = 'none';
+        }
+    });
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const amountInput = document.getElementById('amountInput');
+    const itemSelect = document.getElementById('itemSelect');
+    const profitSpan = document.getElementById('paymentProfit');
+
+    const items = {
+        {% for item in items %}
+        {{ item.id }}: {
+            price: {{ item.price or 0 }},
+            purchase_price: {{ item.purchase_price or 0 }}
+        },
+        {% endfor %}
+    };
+
+    function formatRub(value) {
+        return new Intl.NumberFormat('ru-RU', {
+            style: 'currency',
+            currency: 'RUB',
+            minimumFractionDigits: 2
+        }).format(value);
+    }
+
+    function updateProfit() {
+        const selectedId = itemSelect.value;
+        const item = items[selectedId];
+        const amount = parseFloat(amountInput.value);
+
+        if (item && !isNaN(amount)) {
+            const markupRatio = item.price > 0 ? (item.price - item.purchase_price) / item.price : 0;
+            const profit = amount * markupRatio;
+            profitSpan.textContent = formatRub(profit);
+        } else {
+            profitSpan.textContent = '—';
+        }
+    }
+
+    itemSelect.addEventListener('change', updateProfit);
+    amountInput.addEventListener('input', updateProfit);
+});
+</script>
+
+
+
+{% endblock %}

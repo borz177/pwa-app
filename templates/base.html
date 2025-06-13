@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}Система учёта{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<!-- Подключение шрифта Merriweather -->
+<!-- Montserrat -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap" rel="stylesheet">
+<link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+
+
+<style>
+  .navbar .nav-link {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #ffffff !important;
+  }
+
+  .navbar .nav-link:hover {
+    color: #ffc107 !important;
+  }
+</style>
+
+
+</head>
+<body>
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div id="flash-container" class="mt-3">
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+<header>
+    <script>
+      setTimeout(() => {
+        const container = document.getElementById('flash-container');
+        if (container) {
+          container.style.transition = 'opacity 0.5s ease-out';
+          container.style.opacity = '0';
+          setTimeout(() => container.remove(), 500);
+        }
+      }, 1000); // 1 секунда
+    </script>
+      </header>
+  {% endif %}
+{% endwith %}
+
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/dashboard">Рассрочка+</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <!-- ЛЕВАЯ часть -->
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item"><a class="nav-link" href="/dashboard">ОФОРМИТЬ</a></li>
+                <li class="nav-item"><a class="nav-link" href="/investors/add">ИНВЕСТОРЫ</a></li>
+                <li class="nav-item"><a class="nav-link" href="/clients">КЛИЕНТЫ</a></li>
+                <li class="nav-item"><a class="nav-link" href="/payments">КАССА</a></li>
+                <li class="nav-item"><a class="nav-link" href="/contracts">ДОГОВОРЫ</a></li>
+                <li class="nav-item">
+                    <a class="nav-link d-flex align-items-center" href="/overdue">
+                         ПРОСРОЧЕННЫЕ
+                        {% if overdue_count is defined and overdue_count > 0 %}
+                            <span class="badge bg-danger ms-2 fw-bold">{{ overdue_count }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary ms-2"></span>
+                        {% endif %}
+                    </a>
+                </li>
+            </ul>
+
+            <!-- ПРАВАЯ часть -->
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                {% if current_user.is_authenticated and current_user.is_admin %}
+                <li class="nav-item">
+                    <a class="nav-link d-flex align-items-center" href="{{ url_for('admin_users') }}">
+                        👤 <span class="ms-1">Пользователи</span>
+                    </a>
+                </li>
+                {% endif %}
+
+                {% if current_user.is_authenticated %}
+                <li class="nav-item">
+                    <a class="nav-link d-flex align-items-center"  href="{{ url_for('logout') }}">
+                         <span class="ms-1">ВЫЙТИ</span>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    {% block content %}{% endblock %}
+</div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js');
+  }
+</script>
+ <!--JavaScript для маски ввода номера телефона-->
+<script src="https://unpkg.com/imask"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const maskPhoneField = (inputId) => {
+      const input = document.getElementById(inputId);
+      if (input) {
+        const mask = IMask(input, {
+          mask: '{+7} (000) 000-00-00'
+        });
+
+        input.addEventListener("focus", function () {
+          if (input.value.trim() === "") {
+            input.value = "+7 ";
+            mask.updateValue();
+          }
+        });
+      }
+    };
+
+    maskPhoneField("client_phone");
+    maskPhoneField("guarantor_phone");
+  });
+</script>
+
+
+
+
+
+</body>
+</html>

@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+  <!-- Форма добавления инвестора -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h4>Добавить инвестора</h4>
+    </div>
+    <div class="card-body">
+      <form method="POST">
+        <div class="mb-3">
+          <input type="text" name="name" class="form-control" required placeholder="Полное имя инвестора">
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Добавить</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Список инвесторов -->
+  <div class="card">
+    <div class="card-header">
+      <h4>Список инвесторов</h4>
+    </div>
+    <div class="card-body p-0">
+      {% if investors %}
+        <div class="list-group list-group-flush">
+          {% for investor in investors %}
+            {% set contracts = investor.items %}
+            {% set total = contracts | map(attribute='purchase_price') | sum %}
+            <div class="list-group-item investor-item">
+              <div class="d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#investorDetails{{ investor.id }}">
+                <div class="d-flex align-items-center">
+                  <div class="avatar bg-secondary text-white rounded-circle me-3">
+                    {{ investor.name.split(' ')[0][0] | upper }}{{ investor.name.split(' ')[1][0] | upper if investor.name.split(' ')|length > 1 else '' }}
+                  </div>
+                  <h5 class="mb-0">{{ investor.name }}</h5>
+                </div>
+         <button class="btn btn-sm btn-outline-danger delete-btn"
+        data-investor-id="{{ investor.id }}"
+        data-investor-name="{{ investor.name }}"
+        data-bs-toggle="modal"
+        data-bs-target="#deleteModal"
+        title="Удалить">
+  <i class="fas fa-trash-alt"></i>
+</button>
+
+              </div>
+
+              <!-- Детали инвестора (скрытые по умолчанию) -->
+              <div class="collapse mt-2" id="investorDetails{{ investor.id }}">
+                <div class="px-3 py-2 bg-light rounded">
+                  <div class="d-flex justify-content-between">
+                    <div>
+                      <small class="text-muted">Договоров:</small>
+                      <div class="fw-bold">{{ contracts | length }}</div>
+                    </div>
+                    <div>
+                      <small class="text-muted">Инвестировано:</small>
+                      <div class="fw-bold">{{ '%.2f'|format(total) | rub }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-center py-5">
+          <p class="text-muted">Список инвесторов пуст</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Модальное окно подтверждения удаления -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="POST" action="" id="deleteForm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="deleteModalLabel">Подтверждение удаления</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+        </div>
+        <div class="modal-body">
+          <p>Вы действительно хотите удалить инвестора <strong id="modalInvestorName"></strong>?</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+          <button type="submit" class="btn btn-danger">
+            <i class="fas fa-trash-alt me-1"></i> Удалить
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- JS для динамического обновления формы -->
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const deleteModal = document.getElementById('deleteModal');
+    const investorNameSpan = document.getElementById('modalInvestorName');
+    const deleteForm = document.getElementById('deleteForm');
+
+    deleteModal.addEventListener('show.bs.modal', function (event) {
+      const button = event.relatedTarget;
+      const investorId = button.getAttribute('data-investor-id');
+      const investorName = button.getAttribute('data-investor-name');
+
+      investorNameSpan.textContent = investorName;
+      deleteForm.action = `/investors/delete/${investorId}`;
+    });
+  });
+</script>
+
+<style>
+  .avatar {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .investor-item {
+    cursor: pointer;
+  }
+  .investor-item:hover {
+    background-color: #f8f9fa;
+  }
+</style>
+
+{% endblock %}

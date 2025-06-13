@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+
+
+{% for item in items %}
+<tr>
+  ...
+  <td>
+    <ul>
+    {% for payment in item.payments %}
+      <li>{{ payment.paid_at.strftime("%d.%m.%Y") }} — {{ "%.2f"|format(payment.amount) }} сом</li>
+    {% endfor %}
+    </ul>
+  </td>
+</tr>
+{% endfor %}
+{% endblock %}

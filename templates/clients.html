@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Клиенты{% endblock %}
+
+{% block content %}
+<h2>Клиенты</h2>
+
+<form method="POST" class="mb-3">
+  <div class="input-group">
+    <input type="text" name="search" class="form-control" placeholder="Поиск по ФИО" value="{{ search_query or '' }}">
+    <button class="btn btn-primary" type="submit">Найти</button>
+  </div>
+</form>
+
+{% if all_clients_data %}
+  <div class="accordion" id="clientsAccordion">
+    {% for client in all_clients_data %}
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="heading{{ loop.index }}">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}">
+            {{ client.client_name }} — Общий долг: {{ client.total_debt | rub }}
+          </button>
+        </h2>
+
+        <div id="collapse{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#clientsAccordion">
+          <div class="accordion-body">
+            {% for entry in client.client_data %}
+            <div class="mb-3 p-3 border rounded shadow-sm" style="min-width: 350px;">
+              <!-- Блок инвестора -->
+              {% if entry.item.investor %}
+              <div class="investor-section mb-3 p-1 bg-primary text-white rounded">
+                <h6 class="d-flex align-items-center mb-0">
+                  <i class="fas fa-user-tie me-2"></i>
+                  <span>{{ entry.item.investor.name }}</span>
+                </h6>
+              </div>
+              {% endif %}
+
+              <!-- Основная информация -->
+              <div class="product-info">
+                <div class="d-flex align-items-center mb-2">
+                  <i class="fas fa-box-open text-muted me-2"></i>
+                  <strong class="me-2">{{ entry.item.name }}</strong>
+                  {% if entry.item.price %}
+                    <span class="badge bg-secondary">{{ entry.item.price | rub }}</span>
+                  {% endif %}
+                </div>
+
+                <div class="payment-info">
+                  <div class="d-flex mb-1">
+                    <i class="fas fa-check-circle text-success me-2 mt-1"></i>
+                    <span>Оплачено: {{ entry.total_paid | rub }}</span>
+                  </div>
+                  <div class="d-flex mb-2">
+                    <i class="fas fa-clock text-danger me-2 mt-1"></i>
+                    <span>Осталось: {{ entry.remaining | rub }}</span>
+                  </div>
+                </div>
+
+                <div class="mt-2">
+                  <a href="{{ url_for('item_payments', item_id=entry.item.id) }}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-history me-1"></i> История платежей
+                  </a>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="alert alert-warning mt-3">Клиенты не найдены</div>
+{% endif %}
+{% endblock %}

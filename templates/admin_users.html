@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+<div class="container mt-5">
+    <h2 class="mb-4">Управление пользователями</h2>
+
+    <form class="mb-4" method="GET">
+        <div class="input-group">
+            <input type="text" name="search" class="form-control" placeholder="Поиск по email...">
+            <button class="btn btn-primary" type="submit">Поиск</button>
+        </div>
+    </form>
+
+    <form class="mb-4" method="POST" action="{{ url_for('add_user_by_email') }}">
+        <div class="input-group">
+            <input type="email" name="email" class="form-control" placeholder="Добавить пользователя по email..." required>
+            <button class="btn btn-success" type="submit">Добавить</button>
+        </div>
+    </form>
+
+    <div class="table-responsive">
+    <table class="table table-bordered table-striped">
+        <thead class="table-primary">
+            <tr>
+                <th>ID</th>
+                <th>Email</th>
+                <th>Админ</th>
+                <th>Доступ</th>
+                <th>Истекает</th>
+                <th>Действия</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr data-bs-toggle="collapse" data-bs-target="#details{{ user.id }}" style="cursor: pointer;">
+                <td>{{ user.id }}</td>
+                <td><strong>{{ user.email }}</strong></td>
+                <td>
+                    {% if user.is_admin %}
+                        <span class="badge bg-success">Да</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Нет</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if user.active_license %}
+                        <span class="badge bg-success">Активен</span>
+                    {% else %}
+                        <span class="badge bg-danger">Неактивен</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if user.active_license and user.active_license.expires_at %}
+                        {{ user.active_license.expires_at.strftime('%d.%m.%Y') }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    <form method="POST" action="{{ url_for('toggle_admin', user_id=user.id) }}" style="display:inline-block">
+                        <button class="btn btn-sm btn-warning">
+                            {{ 'Снять админа' if user.is_admin else 'Назначить админом' }}
+                        </button>
+                    </form>
+                      <!-- Кнопка удалить -->
+                  <form method="POST" action="{{ url_for('delete_user', user_id=user.id) }}"
+                       style="display:inline-block" onsubmit="return confirm('Удалить пользователя?');">
+                      <button class="btn btn-sm btn-danger mt-1">Удалить</button>
+                  </form>
+                </td>
+            </tr>
+            <tr class="collapse bg-light" id="details{{ user.id }}">
+                <td colspan="6">
+                    <div class="d-flex flex-wrap gap-2">
+                        <!-- Активировать доступ -->
+                        <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#activateModal{{ user.id }}">
+                            Активировать доступ
+                        </button>
+
+                        <!-- История лицензий -->
+                        <a href="{{ url_for('user_license_history', user_id=user.id) }}" class="btn btn-sm btn-info">
+                            История лицензий
+                        </a>
+
+                    </div>
+                </td>
+            </tr>
+
+            <!-- Модальное окно -->
+            <div class="modal fade" id="activateModal{{ user.id }}" tabindex="-1" aria-labelledby="activateModalLabel{{ user.id }}" aria-hidden="true">
+                <div class="modal-dialog">
+                    <form method="POST" action="{{ url_for('activate_license', user_id=user.id) }}">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="activateModalLabel{{ user.id }}">Активация лицензии</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                            </div>
+                            <div class="modal-body">
+                                <label for="expiration">Срок действия:</label>
+                                <input type="text" class="form-control license-date-input" name="expiration" placeholder="например, 31.12.2025" required>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-success">Активировать</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        flatpickr(".license-date-input", {
+            dateFormat: "d.m.Y",
+            locale: "ru"
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Договоры</h1>
+
+    <!-- Поисковая форма -->
+    <form method="get" action="{{ url_for('contracts') }}">
+        <div class="row mb-3">
+            <div class="col-md-5 mt-2">
+                <input type="text" name="q" value="{{ request.args.get('q', '') }}" class="form-control" placeholder="Клиент или товар...">
+
+            </div>
+            <div class="col-md-3 md-5 mt-2">
+                <input type="date" name="created_date" class="form-control" value="{{ request.args.get('created_date', '') }}">
+            </div>
+            <div class="col-md-4 d-flex gap-2 md-5 mt-2">
+                <button type="submit" class="btn btn-primary">Поиск</button>
+                {% if request.args.get('q') or request.args.get('created_date') %}
+                <a href="{{ url_for('contracts') }}" class="btn btn-outline-secondary">Сброс</a>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+
+    {% if items %}
+    <!-- Стили таблицы -->
+    <style>
+        .table-clickable tbody tr {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .table-clickable tbody tr:hover {
+            background-color: rgba(0, 123, 255, 0.05);
+        }
+
+        .table-clickable tbody tr:active {
+            transform: scale(0.99);
+            background-color: rgba(0, 123, 255, 0.1);
+            box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-badge {
+            font-size: 0.85em;
+            padding: 0.35em 0.65em;
+        }
+
+        .badge-active {
+            background-color: #0d6efd;
+        }
+
+        .badge-completed {
+            background-color: #198754;
+        }
+
+        .badge-drafted {
+            background-color: #0a62b1;
+        }
+
+        .photo-thumbnail {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+    </style>
+
+    <!-- Таблица -->
+    <div class="table-responsive">
+        <table class="table table-hover table-clickable">
+            <thead class="table-primary">
+                <tr>
+                    <th>№</th>
+                    <th>Клиент</th>
+                    <th>Товар</th>
+                    <th>Статус</th>
+                    <th>Дата</th>
+                    <th>Фото</th>
+                    {% if current_user.is_admin %}
+                    <th>Действия</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr onclick="window.location='{{ url_for('edit_item', item_id=item.id) }}'">
+                    <td>{{ item.user_contract_number or "—" }}</td>
+                    <td>{{ item.client_name }}</td>
+                    <td>{{ item.name }}</td>
+                    <td>
+                        {% if item.status == 'active' %}
+                        <span class="badge badge-active status-badge">Активный</span>
+                        {% elif item.status == 'Завершен' %}
+                        <span class="badge badge-completed status-badge">Завершен</span>
+                        {% elif item.status == 'Оформлен' %}
+                        <span class="badge badge-drafted status-badge">Оформлен</span>
+                        {% else %}
+                        <span class="badge bg-secondary status-badge">{{ item.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ item.created_at.strftime("%d.%m.%Y") if item.created_at else "—" }}</td>
+                    <td>
+                        {% if item.photo_url %}
+                        <a href="{{ url_for('static', filename='uploads/' ~ item.photo_url) }}"
+                           target="_blank"
+                           onclick="event.stopPropagation()">
+                            <img src="{{ url_for('static', filename='uploads/' ~ item.photo_url) }}"
+                                 alt="Фото товара"
+                                 class="photo-thumbnail">
+                        </a>
+                        {% else %}
+                        <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+
+                    {% if current_user.is_admin or item.user_id == current_user.id %}
+                    <td onclick="event.stopPropagation()">
+                        <div class="d-flex gap-2">
+                            <!-- Кнопка для вызова модального окна -->
+                            <button type="button"
+                                    class="btn btn-sm btn-danger"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#deleteModal{{ item.id }}">
+                                Удалить
+                            </button>
+                        </div>
+                    </td>
+                    {% endif %}
+                </tr>
+
+                <!-- Модальное окно подтверждения удаления -->
+                <div class="modal fade" id="deleteModal{{ item.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ item.id }}" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <form method="POST" action="{{ url_for('delete_item', item_id=item.id) }}">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="deleteModalLabel{{ item.id }}">Удалить договор</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                                </div>
+                                <div class="modal-body">
+                                    Вы уверены, что хотите удалить договор с <strong>{{ item.client_name }}</strong> на товар <strong>{{ item.name }}</strong>?
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                                    <button type="submit" class="btn btn-danger">Удалить</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-info mt-3">
+        <i class="bi bi-info-circle"></i> Ничего не найдено. Попробуйте изменить параметры поиска.
+    </div>
+    {% endif %}
+</div>
+
+<!-- Поиск по таблице -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const searchInput = document.querySelector('input[name="q"]');
+    const rows = document.querySelectorAll('tbody tr');
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchQuery = urlParams.get('q')?.toLowerCase();
+
+    if (searchQuery) {
+        rows.forEach(row => {
+            const clientName = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+            const itemName = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+
+            if (!clientName.includes(searchQuery) && !itemName.includes(searchQuery)) {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    searchInput.addEventListener('input', function(e) {
+        const query = e.target.value.toLowerCase();
+        rows.forEach(row => {
+            const clientName = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+            const itemName = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+
+            if (query === '') {
+                row.style.display = '';
+            } else if (!clientName.includes(query) && !itemName.includes(query)) {
+                row.style.display = 'none';
+            } else {
+                row.style.display = '';
+            }
+        });
+    });
+});
+</script>
+
+<!-- Обработка кликов по строкам таблицы -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll('.table-clickable tbody tr').forEach(row => {
+        row.addEventListener('click', function(e) {
+            if (e.target.tagName === 'A' ||
+                e.target.tagName === 'BUTTON' ||
+                e.target.closest('button') ||
+                e.target.closest('a') ||
+                e.target.closest('.dropdown')) {
+                return;
+            }
+            window.location = this.getAttribute('onclick').match(/'([^']+)'/)[1];
+        });
+    });
+});
+</script>
+{% endblock %}

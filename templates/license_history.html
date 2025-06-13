@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h3>История лицензий — {{ user.email }}</h3>
+
+    <a href="{{ url_for('admin_users') }}" class="btn btn-secondary btn-sm mb-3">← Назад</a>
+
+    <table class="table table-bordered">
+        <thead class="table-light">
+            <tr>
+                <th>ID</th>
+                <th>Активирована</th>
+                <th>Истекает</th>
+                <th>Активна</th>
+                <th>Кем выдана</th>
+                <th>Действия</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for license in licenses %}
+            <tr>
+                <td>{{ license.id }}</td>
+                <td>{{ license.activated_at.strftime('%d.%m.%Y') }}</td>
+                <td>{{ license.expires_at.strftime('%d.%m.%Y') }}</td>
+                <td>
+                    {% if license.is_active %}
+                        <span class="badge bg-success">Да</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Нет</span>
+                    {% endif %}
+                </td>
+                <td>{{ license.admin.email if license.admin else '-' }}</td>
+                <td>
+                    {% if license.is_active %}
+                    <form method="POST" action="{{ url_for('deactivate_license', license_id=license.id) }}" onsubmit="return confirm('Отключить эту лицензию?');">
+                        <button class="btn btn-sm btn-danger">Деактивировать</button>
+                    </form>
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

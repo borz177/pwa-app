@@ -1,0 +1,12 @@
+Flask>=2.2
+Flask-SQLAlchemy>=3.0
+Flask-Migrate>=4.0
+Flask-Login>=0.6
+Flask-Dance[google]>=6.1  # Google OAuth
+Flask-WTF>=1.1
+python-dotenv>=1.0
+Werkzeug>=2.2
+Pillow>=10.0  # Для обработки изображений
+WeasyPrint>=60.0  # Для генерации PDF
+Jinja2>=3.1
+gunicorn

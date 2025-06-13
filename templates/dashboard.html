@@ -1,0 +1,380 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- CSS‑фикс: убираем зелёные галочки для необязательных полей -->
+<style>
+  .was-validated .optional-quiet:valid {
+    border-color: #ced4da !important;  /* стандартная рамка */
+    background-image: none !important; /* убираем галочку */
+    box-shadow: none !important;
+  }
+</style>
+
+{% if license_expiration %}
+  <div class="alert alert-info">
+    Ваша лицензия активна до {{ license_expiration.strftime('%d.%m.%Y') }}.
+  </div>
+{% else %}
+  <div class="alert alert-warning">
+    У вас нет активной лицензии.
+    <div class="mt-2">
+      <a href="https://wa.me/9657777027" target="_blank" class="btn btn-success">
+         Написать в WhatsApp
+      </a>
+    </div>
+  </div>
+{% endif %}
+
+
+<div class="container mt-4">
+  <h2>Оформить товар</h2>
+  <form id="itemForm" method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+
+<div class="mb-3">
+  <label for="investor" class="form-label">Инвестор</label>
+  <div class="input-group">
+    <select name="investor_id" class="form-select">
+      <option value="">Без инвестора</option>
+      {% for inv in investors %}
+        {% if inv.id is not none %}
+          <option value="{{ inv.id }}"
+            {% if (request.form.get('investor_id')|int == inv.id) or (selected_id|int == inv.id) %}selected{% endif %}>
+            {{ inv.name }}
+          </option>
+        {% endif %}
+      {% endfor %}
+    </select>
+    <a class="btn btn-outline-primary" href="{{ url_for('add_investor') }}" title="Добавить инвестора">+</a>
+  </div>
+</div>
+
+
+
+    <div class="mb-3">
+      <label for="created_at" class="form-label">Дата оформления</label>
+      <input type="date" class="form-control" name="created_at" id="created_at"
+             value="{{ current_date }}" required>
+      <div class="invalid-feedback">Заполните поле</div>
+    </div>
+    <div class="mb-3 position-relative">
+          <label for="client_name" class="form-label">ФИО клиента</label>
+          <input type="text" class="form-control" id="client_name" name="client_name" required autocomplete="off">
+          <div class="invalid-feedback">Заполните поле</div>
+          <div id="autocomplete-list" class="list-group position-absolute w-100 z-3" style="max-height: 200px; overflow-y: auto;"></div>
+      </div>
+
+     <div class="mb-3">
+          <label for="client_phone" class="form-label">Телефон клиента</label>
+          <input type="tel" class="form-control" id="client_phone" name="client_phone"
+                 value="{{ item.phone_number if item else '' }}"
+                 placeholder="+7 (___) ___-__-__"
+                 pattern="^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$"
+                 required>
+          <div class="invalid-feedback">Введите корректный номер</div>
+      </div>
+
+
+    <div class="mb-3">
+      <label for="name" class="form-label">Название товара</label>
+      <input type="text" class="form-control" id="name" name="name" required>
+      <div class="invalid-feedback">Заполните поле</div>
+    </div>
+
+    <div class="mb-3">
+      <label for="purchase_price" class="form-label">Цена закупа</label>
+      <div class="input-group has-validation">
+        <input type="number" step="0.01" class="form-control" name="purchase_price"
+               id="purchase_price" required value="{{ item.purchase_price if item else '' }}">
+        <span class="input-group-text">₽</span>
+        <div class="invalid-feedback">Заполните поле</div>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label for="profit_margin" class="form-label">Наценка (%)</label>
+      <div class="d-flex align-items-center gap-3">
+        <input type="range" class="form-range" id="profit_margin" min="1" max="30" value="25" style="flex: 1;">
+        <span id="margin_display">10%</span>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label for="installment_price" class="form-label">Цена в рассрочку</label>
+      <div class="input-group has-validation">
+        <input type="number" step="0.01" class="form-control" name="price"
+               id="installment_price" required value="{{ item.price if item else '' }}">
+        <span class="input-group-text">₽</span>
+        <div class="invalid-feedback">Заполните поле</div>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label for="down_payment" class="form-label">Первоначальный взнос</label>
+      <div class="input-group">
+        <input type="number" step="0.01" min="0" class="form-control" id="down_payment" name="down_payment">
+        <span class="input-group-text">₽</span>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label for="monthly_payment" class="form-label">Ежемесячный платёж</label>
+      <input type="text" class="form-control" id="monthly_payment" readonly>
+    </div>
+
+    <div class="mb-3">
+      <label for="installments" class="form-label">Срок рассрочки</label>
+      <select class="form-select" id="installments" name="installments" required>
+        {% for month in range(1, 13) %}
+          <option value="{{ month }}">{{ month }} месяц{% if month > 1 %}ев{% endif %}</option>
+        {% endfor %}
+      </select>
+      <div class="invalid-feedback">Выберите срок</div>
+    </div>
+
+
+
+    <div class="mb-3">
+      <label for="guarantor_name" class="form-label">ФИО поручителя</label>
+      <input type="text" class="form-control optional-quiet" id="guarantor_name" name="guarantor_name">
+    </div>
+
+    <div class="mb-3">
+      <label for="guarantor_phone" class="form-label">Телефон поручителя</label>
+      <input type="tel" class="form-control optional-quiet" id="guarantor_phone" name="guarantor_phone"
+       value="{{ item.guarantor_phone if item and item.guarantor_phone else '' }}"
+       placeholder="+7 (___) ___-__-__">
+    </div>
+
+    <div class="mb-3">
+      <label for="photo" class="form-label">Фото</label>
+      <input type="file" class="form-control" id="photo" name="photo" accept="image/*" capture="environment">
+    </div>
+{% if current_user.active_license and current_user.active_license.is_active %}
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#confirmModal">
+      Оформить
+    </button>
+  {% else %}
+    <button type="button" class="btn btn-secondary" disabled>Доступ ограничен</button>
+  {% endif %}
+  </form>
+
+  <h3 class="mt-5">Оформленные сегодня</h3>
+
+  {% if items %}
+    <table class="table table-striped table-hover mt-3">
+      <thead>
+        <tr>
+          <th>ФИО клиента</th>
+          <th>Название</th>
+          <th>Цена</th>
+          <th>Срок</th>
+          <th>Фото</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+          <tr onclick="window.location='{{ url_for('edit_item', item_id=item.id) }}'" style="cursor: pointer;">
+            <td>{{ item.client_name }}</td>
+            <td>{{ item.name }}</td>
+            <td>{{ item.purchase_price }} ₽</td>
+            <td>{{ item.installments }} мес.</td>
+            <td>
+              {% if item.photo_url %}
+                <a href="{{ url_for('static', filename='uploads/' ~ item.photo_url) }}" target="_blank">
+                  <img src="{{ url_for('static', filename='uploads/' ~ item.photo_url) }}" alt="Фото" style="height: 60px;">
+                </a>
+              {% else %}
+                —
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="text-muted">За сегодня ничего не оформлено.</p>
+  {% endif %}
+
+  <!-- Модальное окно -->
+  <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="confirmModalLabel">Подтверждение</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+        </div>
+        <div class="modal-body">Вы уверены, что хотите оформить этот товар?</div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+          <button type="button" class="btn btn-primary" id="confirmSubmit">Подтвердить</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+#autocomplete-list {
+
+  border-top: none;
+  background-color: #fff;
+  z-index: 1000;
+  position: absolute;
+  width: 100%;
+  max-height: 250px;
+  overflow-y: auto;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 0 0 0.5rem 0.5rem;
+}
+
+#autocomplete-list .list-group-item {
+  cursor: pointer;
+  padding: 10px 15px;
+  font-size: 0.95rem;
+  transition: background-color 0.2s ease;
+}
+
+#autocomplete-list .list-group-item:hover,
+#autocomplete-list .list-group-item:focus {
+  background-color: #f0f8ff;
+  color: #0d6efd;
+}
+
+@media (max-width: 576px) {
+  #autocomplete-list .list-group-item {
+    font-size: 0.9rem;
+    padding: 8px 12px;
+  }
+}
+</style>
+
+<!-- подсказки с совпадающими клиентами из списка -->
+<script>
+document.getElementById('client_name').addEventListener('input', function() {
+  const query = this.value;
+  const list = document.getElementById('autocomplete-list');
+
+  if (query.length < 2) {
+    list.innerHTML = '';
+    return;
+  }
+
+  fetch(`/autocomplete?query=${encodeURIComponent(query)}`)
+    .then(res => res.json())
+    .then(data => {
+      list.innerHTML = '';
+      data.forEach(client => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'list-group-item list-group-item-action';
+        item.textContent = client;
+        item.onclick = () => {
+          document.getElementById('client_name').value = client;
+          list.innerHTML = '';
+        };
+        list.appendChild(item);
+      });
+    });
+});
+</script>
+
+
+
+
+<!-- Скрипты -->
+<script>
+  /* ---------- расчёты ---------- */
+  function calculateInstallmentPrice() {
+    const purchasePrice = parseFloat(document.getElementById("purchase_price").value) || 0;
+    const margin        = parseInt(document.getElementById("profit_margin").value)   || 0;
+    const installment   = purchasePrice * (1 + margin / 100);
+    document.getElementById("installment_price").value = installment.toFixed(2);
+    document.getElementById("margin_display").textContent = margin + "%";
+    calculateMonthlyPayment();
+  }
+
+  function calculateMonthlyPayment() {
+    const price        = parseFloat(document.getElementById("installment_price").value) || 0;
+    const downPayment  = parseFloat(document.getElementById("down_payment").value)      || 0;
+    const installments = parseInt(document.getElementById("installments").value)        || 1;
+    const monthly      = (price - downPayment) / installments;
+    document.getElementById("monthly_payment").value = monthly > 0
+      ? monthly.toFixed(2) + " ₽"
+      : "0 ₽";
+  }
+
+  function formatToTwoDecimals(input) {
+    const value = parseFloat(input.value);
+    input.value = !isNaN(value) ? value.toFixed(2) : "0.00";
+  }
+
+  /* ---------- инициализация ---------- */
+  document.addEventListener("DOMContentLoaded", () => {
+    /* первичный расчёт */
+    calculateInstallmentPrice();
+    calculateMonthlyPayment();
+
+    /* слушатели пересчётов */
+    document.getElementById("purchase_price")   .addEventListener("input",  calculateInstallmentPrice);
+    document.getElementById("profit_margin")    .addEventListener("input",  calculateInstallmentPrice);
+    document.getElementById("installment_price").addEventListener("input",  calculateMonthlyPayment);
+    document.getElementById("down_payment")     .addEventListener("input",  calculateMonthlyPayment);
+    document.getElementById("installments")     .addEventListener("change", calculateMonthlyPayment);
+
+    document.getElementById("installment_price").addEventListener("blur", e => formatToTwoDecimals(e.target));
+    document.getElementById("down_payment")     .addEventListener("blur", e => formatToTwoDecimals(e.target));
+
+    /* ---------- кастомная Bootstrap-валидация ---------- */
+    const form        = document.getElementById("itemForm");
+    const optionalIds = ["guarantor_name", "guarantor_phone", "photo"];
+
+    /* навешиваем «тихий» класс и чистим рамки у опциональных полей */
+    optionalIds.forEach(id => {
+      const field = document.getElementById(id);
+      if (!field) return;
+
+      field.classList.add("optional-quiet");        // для CSS-фикса
+
+      const clear = () => {
+        if (!field.value || (field.type === "file" && field.files.length === 0)) {
+          field.classList.remove("is-valid", "is-invalid");
+        }
+      };
+
+      /* файл слушаем через change, остальные — input */
+      if (field.type === "file") {
+        field.addEventListener("change", clear);
+        field.addEventListener("blur",   clear);
+      } else {
+        field.addEventListener("input", clear);
+        field.addEventListener("blur",  clear);
+      }
+    });
+
+    /* подтверждение из модального окна */
+    document.getElementById("confirmSubmit").addEventListener("click", () => {
+      if (form.checkValidity()) {
+  form.submit();
+} else {
+  form.classList.add("was-validated");
+  optionalIds.forEach(id => {
+    const f = document.getElementById(id);
+    if (f && (!f.value || (f.type === "file" && f.files.length === 0))) {
+      f.classList.remove("is-valid", "is-invalid");
+    }
+  });
+  const firstInvalid = form.querySelector(":invalid");
+  if (firstInvalid) {
+    setTimeout(() => {
+      firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
+      firstInvalid.focus({ preventScroll: true });
+    }, 250);
+  }
+  bootstrap.Modal.getInstance(document.getElementById("confirmModal")).hide();
+}
+
+    });
+  });
+</script>
+
+{% endblock %}

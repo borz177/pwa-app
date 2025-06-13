@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}Платежи по товару{% endblock %}
+
+{% block content %}
+<div class="client-product-card card border-0 shadow-sm mb-4">
+  <!-- Блок клиента -->
+  <div class="card-header bg-primary text-white">
+    <h5 class="mb-0"><i class="fas fa-user-tie me-2"></i>Клиент: {{ item.client_name }}</h5>
+  </div>
+
+  <div class="card-body">
+    <!-- Блок товара -->
+    <div class="product-section mb-4 p-1 bg-light rounded">
+      <h6 class="d-flex align-items-center mb-1">
+        <i class="fas fa-box-open text-primary me-2"></i>
+        <strong>Товар:</strong>
+        <span class="ms-2">{{ item.name }}</span>
+      </h6>
+    </div>
+
+    <!-- Финансовая информация -->
+    <ul class="list-group list-group-flush">
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <span><i class="far fa-calendar text-muted me-2"></i><strong>Дата оформления:</strong></span>
+        <span class="value-badge fs-6">{{ item.created_at.strftime('%d.%m.%Y') }}</span>
+      </li>
+
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-tag text-muted me-2"></i><strong>Цена закупа:</strong></span>
+        <span class="value-badge fs-8">{{ item.purchase_price | rub }}</span>
+      </li>
+
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-credit-card text-muted me-2"></i><strong>Цена в рассрочку:</strong></span>
+        <span class="value-badge fs-8">{{ item.price | rub }}</span>
+      </li>
+
+      {% if item.down_payment %}
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-hand-holding-usd text-muted me-2"></i><strong>Взнос:</strong></span>
+        <span class="value-badge fs-8">{{ item.down_payment | rub }}</span>
+      </li>
+      {% endif %}
+
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <span><i class="far fa-calendar-alt text-muted me-2"></i><strong>Срок рассрочки:</strong></span>
+        <span class="value-badge fs-8">{{ item.installments }} мес.</span>
+      </li>
+
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-check-circle text-muted me-2"></i><strong>Оплачено:</strong></span>
+        <span class="value-badge fs-8">{{ total_paid | rub }}</span>
+      </li>
+
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-calendar-week text-muted me-2"></i><strong>Остаток:</strong></span>
+        <span class="value-badge fs-8">{{ (remaining or 0) | rub }}</span>
+      </li>
+
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-calendar-week text-muted me-2"></i><strong>Прибыль в месяц:</strong></span>
+        <span class="value-badge fs-8">
+          {% if (item.installments or 0) > 0 %}
+            {{ (((item.price or 0) - (item.purchase_price or 0)) / item.installments) | round(2) | rub }}
+          {% else %}
+            —
+          {% endif %}
+        </span>
+      </li>
+
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-chart-line text-muted me-2"></i><strong>Общая прибыль:</strong></span>
+        <span class="badge bg-success fs-6">{{ ((item.price or 0) - (item.purchase_price or 0)) | rub }}</span>
+      </li>
+
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-info-circle text-muted me-2"></i><strong>Статус:</strong></span>
+        <span class="status-badge">
+          {{ item.status }}
+        </span>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<style>
+.client-product-card {
+  border-radius: 10px;
+  overflow: hidden;
+  transition: transform 0.3s ease;
+}
+.client-product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+.product-section {
+  background-color: #f8f9fa;
+  border-left: 3px solid #0d91fd;
+}
+.list-group-item {
+  padding: 1rem 1.25rem;
+  border-left: none;
+  border-right: none;
+}
+.value-badge {
+  background-color: #ffffff;
+  color: #101010;
+  padding: 0.4em 0.8em;
+  border-radius: 50px;
+  font-weight: 500;
+  font-size: 0.9em;
+  min-width: 80px;
+  text-align: center;
+}
+.status-badge {
+  padding: 0.4em 0.8em;
+  border-radius: 50px;
+  font-size: 0.9em;
+  font-weight: 500;
+  background-color: {% if item.status == 'Активен' %}#d1e7dd{% elif item.status == 'Завершен' %}#e2e3e5{% elif item.status == 'Просрочен' %}#f8d7da{% else %}#cfe2ff{% endif %};
+  color: {% if item.status == 'Активен' %}#0f5132{% elif item.status == 'Завершен' %}#41464b{% elif item.status == 'Просрочен' %}#842029{% else %}#084298{% endif %};
+}
+</style>
+
+<h4>Добавить платёж</h4>
+<form method="POST">
+  <input type="hidden" name="add_payment" value="1">
+
+  <div class="mb-2">
+    <label for="amount">Сумма:</label>
+    <input type="number" name="amount" step="0.01" class="form-control" required id="amount-input">
+
+    <div class="mt-2">
+      <strong>Прибыль с платежа:</strong> <span id="payment-profit">—</span>
+    </div>
+  </div>
+
+  <div class="mb-2">
+    <label for="created_at">Дата платежа:</label>
+    <input type="date" name="created_at" class="form-control" value="{{ current_date }}">
+  </div>
+
+  {% if current_user.active_license and current_user.active_license.is_active %}
+    <button type="submit" class="btn btn-success">Сохранить платеж</button>
+  {% else %}
+    <button type="button" class="btn btn-secondary" disabled>Доступ ограничен</button>
+  {% endif %}
+</form>
+
+<hr>
+
+<h4>История платежей</h4>
+<a href="{{ url_for('export_pdf', item_id=item.id) }}" class="btn btn-primary">📄 Скачать PDF</a>
+{% if item.client_phone %}
+  <a href="{{ url_for('whatsapp_link', item_id=item.id) }}" class="btn btn-success">📤 Отправить в WhatsApp</a>
+{% endif %}
+
+<table class="table table-bordered mt-2">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Дата</th>
+      <th>Сумма</th>
+      <th>Статус</th>
+      <th>Действие</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% if payments %}
+      {% for payment in payments %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ payment.created_at.strftime('%d.%m.%Y') }}</td>
+          <td>{{ payment.amount }} ₽</td>
+          <td>
+            {% if total_paid >= (item.price or 0) %}
+              <span class="badge bg-success">Оплачено</span>
+            {% else %}
+              <span class="badge bg-warning text-dark">Частично</span>
+            {% endif %}
+          </td>
+          <td onclick="event.stopPropagation()">
+            <div class="d-flex gap-2">
+              <button type="button"
+                      class="btn btn-sm btn-outline-danger delete-payment-btn ms-3"
+                      data-bs-toggle="modal"
+                      data-bs-target="#deletePaymentModal{{ payment.id }}">
+                Удалить
+              </button>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Модальное окно удаления -->
+        <div class="modal fade" id="deletePaymentModal{{ payment.id }}" tabindex="-1"
+             aria-labelledby="deletePaymentLabel{{ payment.id }}" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <form method="POST">
+                <input type="hidden" name="delete_payment_id" value="{{ payment.id }}">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="deletePaymentLabel{{ payment.id }}">Подтверждение удаления</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
+                <div class="modal-body">
+                  Вы уверены, что хотите удалить этот платёж?
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                  <button type="submit" class="btn btn-danger">Удалить</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <tr>
+        <td colspan="5" class="text-center">Платежей пока нет.</td>
+      </tr>
+    {% endif %}
+  </tbody>
+</table>
+
+<a href="{{ url_for('client_detail', client_name=item.client_name) }}" class="btn btn-primary mt-1">← Назад</a>
+
+<script>
+  const amountInput = document.getElementById('amount-input');
+  const profitDisplay = document.getElementById('payment-profit');
+
+  // Данные из сервера (Jinja)
+  const price = {{ item.price or 0 }};
+  const purchasePrice = {{ item.purchase_price or 0 }};
+
+  const markupRatio = price > 0 ? (price - purchasePrice) / price : 0;
+
+  const formatRub = (value) =>
+    new Intl.NumberFormat('ru-RU', {
+      style: 'currency',
+      currency: 'RUB',
+      minimumFractionDigits: 2
+    }).format(value);
+
+  amountInput.addEventListener('input', () => {
+    const amount = parseFloat(amountInput.value);
+    if (!isNaN(amount)) {
+      const profit = amount * markupRatio;
+      profitDisplay.textContent = formatRub(profit);
+    } else {
+      profitDisplay.textContent = '—';
+    }
+  });
+</script>
+
+
+
+{% endblock %}

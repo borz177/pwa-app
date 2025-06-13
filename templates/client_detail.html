@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}{{ client_name }}{% endblock %}
+{% block content %}
+<h2>Клиент: {{ client_name }}</h2>
+<div class="row g-3">
+  {% for entry in client_data %}
+  <div class="col-12">
+    <div class="p-3 border rounded-3 transition-all hover-bg-light hover-shadow-sm position-relative"
+         onclick="window.location='{{ url_for('item_payments', item_id=entry.item.id) }}'"
+         role="button">
+      <div class="d-flex justify-content-between">
+        <div>
+          <h5 class="mb-3">{{ entry.item.name }}</h5>
+          <div class="d-flex flex-wrap gap-3">
+            <div>
+              <small class="text-muted d-block">Цена в рассрочку</small>
+              <span class="fw-bold">{{ (entry.item.price or 0) | rub }} ₽</span>
+            </div>
+
+
+            <div>
+              <small class="text-muted d-block">Оплачено</small>
+              <span class="text-success fw-bold">{{ (entry.total_paid or 0) | rub }} ₽</span>
+            </div>
+
+            <div>
+              <small class="text-muted d-block">Остаток</small>
+              <span class="text-warning fw-bold">{{ (entry.remaining or 0) | rub }} </span>
+            </div>
+
+          </div>
+        </div>
+        <span class="fw-bold text-{{ 'success' if entry.item.status == 'Завершен' else 'secondary' }}">
+          {{ entry.item.status }}
+        </span>
+      </div>
+      <div class="position-absolute top-0 end-0 mt-2 me-2">
+        <i class="bi bi-chevron-right text-muted"></i>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<p class="mt-4"><strong>Общий долг: {{ (total_debt or 0) | rub }} ₽</strong></p>
+<a href="{{ url_for('clients') }}" class="btn btn-primary">Назад к списку</a>
+
+<style>
+  .transition-all {
+    transition: all 0.3s ease;
+  }
+  .hover-bg-light:hover {
+    background-color: #f8f9fa;
+  }
+  .hover-shadow-sm:hover {
+    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+  }
+</style>
+{% endblock %}

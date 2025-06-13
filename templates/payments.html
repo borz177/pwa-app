@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block content %}
+
+
+<form method="get" action="{{ url_for('payments') }}" class="mb-4">
+  <div class="row">
+    <div class="mb-3">
+      <label for="investor" class="form-label">Выбрать инвестора:</label>
+      <select name="investor_id" class="form-select" onchange="this.form.submit()">
+        <option value="">Все</option>
+        {% for inv in investors %}
+          <option value="{{ inv.id }}" {% if selected_id|int == inv.id %}selected{% endif %}>
+            {{ inv.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+</form>
+
+<div class="card border-primary shadow-lg">
+  <div class="card-header bg-primary text-white">
+    <h5 class="card-title mb-0">
+      <i class="fas fa-chart-line me-2"></i>Финансовые показатели
+    </h5>
+  </div>
+  <div class="card-body">
+    <div class="finance-stats">
+      <div class="stat-item d-flex justify-content-between align-items-center py-2 border-bottom">
+        <span class="stat-label">
+          <i class="fas fa-coins me-2 text-warning"></i>Всего вложено в рассрочку:
+        </span>
+        <span class="stat-value badge bg-light text-dark fs-6">{{ total_invested | rub }}</span>
+      </div>
+
+      <div class="stat-item d-flex justify-content-between align-items-center py-2 border-bottom">
+        <span class="stat-label">
+          <i class="fas fa-cash-register me-2 text-success"></i>Оплачено клиентами:
+        </span>
+        <span class="stat-value badge bg-light text-dark fs-6">{{ total_paid | rub }}</span>
+      </div>
+
+      <div class="stat-item d-flex justify-content-between align-items-center py-2 border-bottom">
+        <span class="stat-label">
+          <i class="fas fa-calendar-alt me-2 text-info"></i>Прибыль в месяц:
+        </span>
+        <span class="stat-value badge bg-success text-white fs-6">{{ monthly_profit | rub }}</span>
+      </div>
+
+      <div class="stat-item d-flex justify-content-between align-items-center py-2">
+        <span class="stat-label">
+          <i class="fas fa-piggy-bank me-2 text-primary"></i>Общая прибыль:
+        </span>
+        <span class="stat-value badge bg-primary text-white fs-6">{{ total_profit | rub }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .finance-stats {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  .stat-label {
+    font-weight: 500;
+  }
+  .stat-value {
+    font-weight: 600;
+    min-width: 120px;
+    text-align: right;
+    padding: 5px 12px;
+    border-radius: 18px;
+  }
+  .card {
+    border-radius: 10px;
+    overflow: hidden;
+  }
+</style>
+
+{% if current_user.active_license and current_user.active_license.is_active %}
+  <a href="{{ url_for('add_payment') }}" class="btn btn-success mt-4">Добавить платеж</a>
+{% else %}
+  <button type="button" class="btn btn-secondary mt-2" disabled>Доступ ограничен</button>
+{% endif %}
+
+{% endblock %}

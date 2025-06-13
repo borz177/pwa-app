@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Просроченные договоры{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Просроченные договоры</h2>
+
+    {% if items %}
+    <div class="table-responsive">
+        <table class="table table-hover table-bordered">
+            <thead class="table-primary">
+                <tr>
+                    <th>Клиент</th>
+
+                    <th>Дата оформления</th>
+
+                    <th>Пропущенные платежи</th>
+                </tr>
+            </thead>
+            <tbody>
+
+                {% for item in items %}
+                <!-- Основная строка -->
+                <tr data-bs-toggle="collapse" data-bs-target="#details{{ item.id }}" style="cursor: pointer;">
+                    <td>{{ item.client_name }}</td>
+
+                    <td>{{ item.created_at.strftime('%d.%m.%Y') }}</td>
+
+
+                    <td>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for month in item.missed_months %}
+                            <span class="badge bg-danger rounded-pill">
+                                {{ month.strftime('%b %Y') | lower }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </td>
+                </tr>
+
+             <tr class="collapse bg-light" id="details{{ item.id }}">
+    <td colspan="7">
+        <div class="p-3">
+
+
+            <ul class="list-unstyled">
+                <li class="mb-2"><strong>Товар:</strong> {{ item.name }}</li>
+                <li class="mb-2"><strong>Общий срок:</strong> {{ item.total_months }} мес.</li>
+                <li class="mb-2"><strong>Оплачено:</strong> <span class="text-success">{{ item.payments_made }} мес.</span></li>
+                <li class="mb-2"><strong>Просрочено:</strong> <span class="text-danger fw-bold">{{ item.overdue_months }}мес.</span></li>
+               <li class="mb-2"><strong>Ежемесячный платёж:</strong> {{ "%.2f"|format(item.monthly_payment) | rub }}</li>
+            </ul>
+
+            <a href="tel:{{ item.client_phone }}" class="btn btn-primary mt-2">
+                📞 Позвонить
+            </a>
+            </div>
+          </td>
+          </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-3">
+        <p class="text-muted">
+            <small>
+                Всего просроченных договоров: <strong>{{ items|length }}</strong> |
+                Общая сумма просрочки: <strong>{{ items|sum(attribute='price') | rub }}</strong>
+            </small>
+        </p>
+    </div>
+    {% else %}
+    <div class="alert alert-success">
+        <i class="bi bi-check-circle-fill"></i> Нет просроченных договоров. Отличная работа!
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .table {
+        font-size: 14px;
+        white-space: nowrap; /* 👈 помогает на мобилке листать таблицу */
+    }
+    .badge {
+        font-size: 0.8em;
+        padding: 0.35em 0.65em;
+    }
+    .alert {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .table-responsive {
+        overflow-x: auto; /* 👈 это позволяет прокручивать таблицу на телефоне */
+    }
+</style>
+{% endblock %}
